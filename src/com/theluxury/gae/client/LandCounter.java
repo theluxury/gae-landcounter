@@ -266,8 +266,6 @@ public class LandCounter implements EntryPoint {
 			spellsMap.add(i);
 		}
 		
-		console("land map is " + landMap + " and spell map is " + spellsMap);
-		
 		HashSet<Integer> pickedSet;
 		boolean contains = false;
 		// Have to check if you drew the specified card. 
@@ -316,8 +314,6 @@ public class LandCounter implements EntryPoint {
 		HashSet<String> newLandsStrings = new HashSet<String>();
 		oldLandsStrings.add("");
 		
-		// TODO: is this where it goes wrong? 
-		
 		for (String mana : pickedLands) {
 		    int manaLength = mana.length();
 		    // so there are going to be old length * manaLength new permutations of
@@ -357,26 +353,18 @@ public class LandCounter implements EntryPoint {
 		
 	}
 	
+	private boolean checkForMulligan(int numberOfLands, int numberOfCards) {
+		if ((numberOfLands < 2 || numberOfLands > 5) && numberOfCards > 4)
+			return true;
+		
+		return false;
+	}
+	
 	private String sortString(String text) {
 		char[] chars = text.toCharArray();
 	     Arrays.sort(chars);
 	     String sorted = new String(chars);
 	     return sorted;
-	}
-	
-	// This is inclusive. 
-	public static int randInt(int min, int max) {
-
-	    // NOTE: Usually this should be a field rather than a method
-	    // variable so that it is not re-seeded every call.
-	    Random rand = new Random();
-
-	    // nextInt is normally exclusive of the top value,
-	    // so add 1 to make it inclusive
-	    // TODO: This probably has a higher chance of picking 0. 
-	    int randomNum = rand.nextInt((max - min) + 1) + min;
-
-	    return randomNum;
 	}
 	
 	public static ArrayList<String> splitStringSinceRegexIsTooHard(String string) {
