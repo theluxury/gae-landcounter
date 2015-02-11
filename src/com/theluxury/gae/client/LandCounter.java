@@ -273,10 +273,30 @@ public class LandCounter implements EntryPoint {
 			// Need set of numbers that have already been picked. 
 			pickedSet = new HashSet<Integer>();
 			int randomCard;
-			// console(7 + playOrDraw + turnWantToCast);
-			for (int i = 0; i < 7 + playOrDraw + turnWantToCast; i++) {
+			// Is 8 here because you do a -- at the beginning
+			int initialNumberOfCardsInHand = 8;
+			int initialNumberOfLands = 0;
+			// This checks for mulligan
+			do {
+				initialNumberOfCardsInHand--;
+				for (int i = 0; i < initialNumberOfCardsInHand; i++) {
+					do {
+						randomCard = rand.nextInt(sizeOfDeck);
+					} while (pickedSet.contains(randomCard));
+					pickedSet.add(randomCard);
+				}
+				initialNumberOfCardsInHand--;
+				// Counter number of lands
+				for (int card : pickedSet) {
+					if (landMap.containsKey(card)) {
+						initialNumberOfLands++;
+					}
+				}
+			} while (checkForMulligan(initialNumberOfLands, initialNumberOfCardsInHand));
+			
+			// Then, get the rest of the cards. 
+			for (int i = 0; i < playOrDraw + turnWantToCast; i++) {
 				do {
-					// -1 since inclusive. 
 					randomCard = rand.nextInt(sizeOfDeck);
 				} while (pickedSet.contains(randomCard));
 				pickedSet.add(randomCard);
@@ -354,7 +374,7 @@ public class LandCounter implements EntryPoint {
 	}
 	
 	private boolean checkForMulligan(int numberOfLands, int numberOfCards) {
-		if ((numberOfLands < 2 || numberOfLands > 5) && numberOfCards > 4)
+		if ((numberOfLands < 2 || numberOfLands > 5) && numberOfCards > 5)
 			return true;
 		
 		return false;
