@@ -270,14 +270,14 @@ public class LandCounter implements EntryPoint {
 		boolean contains = false;
 		// Have to check if you drew the specified card. 
 		do {
-			// Need set of numbers that have already been picked. 
-			pickedSet = new HashSet<Integer>();
 			int randomCard;
 			// Is 8 here because you do a -- at the beginning
 			int initialNumberOfCardsInHand = 8;
 			int initialNumberOfLands = 0;
 			// This checks for mulligan
 			do {
+				// Need set of numbers that have already been picked. 
+				pickedSet = new HashSet<Integer>();
 				initialNumberOfCardsInHand--;
 				for (int i = 0; i < initialNumberOfCardsInHand; i++) {
 					do {
@@ -285,8 +285,7 @@ public class LandCounter implements EntryPoint {
 					} while (pickedSet.contains(randomCard));
 					pickedSet.add(randomCard);
 				}
-				initialNumberOfCardsInHand--;
-				// Counter number of lands
+				// Counts number of lands
 				for (int card : pickedSet) {
 					if (landMap.containsKey(card)) {
 						initialNumberOfLands++;
