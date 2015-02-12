@@ -153,11 +153,12 @@ public class LandCounter implements EntryPoint {
 		calculateButton.addClickHandler(new ClickHandler() {
 			public void onClick(ClickEvent event) {
 				float percentage = getOdds();
+				percentage *= 100.0;
 				console(percentage);
-				percentagLabel.setText(String.valueOf(percentage));
-				if (percentage < .33)
+				percentagLabel.setText(String.valueOf(percentage) + "%");
+				if (percentage < 33.3)
 					percentagLabel.getElement().setClassName("label label-danger custom-label");
-				else if (percentage < .67)
+				else if (percentage < 66.6)
 					percentagLabel.getElement().setClassName("label label-warning custom-label");
 				else
 					percentagLabel.getElement().setClassName("label label-success custom-label");
