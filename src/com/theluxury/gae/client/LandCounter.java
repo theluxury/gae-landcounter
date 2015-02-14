@@ -10,6 +10,7 @@ import java.util.Random;
 import org.gwtbootstrap3.client.ui.AnchorListItem;
 import org.gwtbootstrap3.client.ui.Button;
 import org.gwtbootstrap3.client.ui.ButtonGroup;
+import org.gwtbootstrap3.client.ui.CheckBox;
 import org.gwtbootstrap3.client.ui.DropDownMenu;
 import org.gwtbootstrap3.client.ui.Label;
 import org.gwtbootstrap3.client.ui.TextBox;
@@ -20,8 +21,6 @@ import org.gwtbootstrap3.client.ui.constants.Toggle;
 import com.google.gwt.core.client.EntryPoint;
 import com.google.gwt.event.dom.client.ClickEvent;
 import com.google.gwt.event.dom.client.ClickHandler;
-import com.google.gwt.regexp.shared.RegExp;
-import com.google.gwt.regexp.shared.SplitResult;
 import com.google.gwt.user.client.ui.FlexTable;
 import com.google.gwt.user.client.ui.HorizontalPanel;
 import com.google.gwt.user.client.ui.RootPanel;
@@ -192,6 +191,11 @@ public class LandCounter implements EntryPoint {
 		TextBox manaOfThisLandTextBox = new TextBox();
 		manaOfThisLandTextBox.getElement().setClassName("landCounter-form");
 		
+		CheckBox comesIntoPlayTapped = new CheckBox();
+		Label comesIntoPlayTappedLabel = new Label("Check if comes into play tapped.");
+		comesIntoPlayTappedLabel.getElement().setId("marginLeft");
+		comesIntoPlayTappedLabel.getElement().setClassName("label label-info");
+		
 		// Order here matters. need to set widget of tooltip before putting in table. 
 		if (row == 1)  {
 			manaOfLandTooltip.setText("For example, for Volcanic Island, put ru");
@@ -201,6 +205,9 @@ public class LandCounter implements EntryPoint {
 		
 		landsFlexTable.setWidget(row, 0, numberOfLandsTextBox);
 		landsFlexTable.setWidget(row, 1, manaOfThisLandTextBox);
+		landsFlexTable.setWidget(row, 2, comesIntoPlayTapped);
+		if (row == 1)
+			landsFlexTable.setWidget(row, 3, comesIntoPlayTappedLabel);
 		
 	}
 
@@ -211,65 +218,70 @@ public class LandCounter implements EntryPoint {
 	}
 	
 	private float getOdds() {
+		int playOrDraw;
+		if (playOrDrawButton.getText().equalsIgnoreCase("Play"))
+			playOrDraw = 0;
+		else
+			playOrDraw = 1;
+				
+		int turnWantToCast = Integer.valueOf(turnBox.getValue());
+		int sizeOfDeck = Integer.valueOf(deckSizeBox.getValue());
+				
+		// Make a hashmap linking the number of the land (for the random number 
+		// generator) and the mana it can produce. 
+		// Also, should indicate if the land is a tapped land. 
+		HashMap<Integer, Land> landMap = new HashMap<Integer, Land>();
+		int landMapInt = 0;
+				
+		// row count starts since the first row is the labels. 
+		for (int i = 1; i < landsFlexTable.getRowCount(); i++) {
+			for (int j = 0; j < Integer.valueOf(((TextBox) landsFlexTable.getWidget(i, 0)).getValue()); j++) {
+				Land land = new Land();
+				land.setMana(((TextBox) landsFlexTable.getWidget(i, 1)).getValue().toLowerCase());
+				land.setComesIntoPlayTapped(((CheckBox)landsFlexTable.getWidget(i, 2)).getValue());
+				landMap.put(landMapInt, land);
+				landMapInt++;
+			}
+		}
+				
+		HashSet<Integer> spellsMap = new HashSet<Integer>();
+		// Alright, finally dealing with whether or not you draw the card..
+		int numberOfSpells = Integer.valueOf(numberOfCardsBox.getValue());
+				
+		// Check to see if they put in a real number of spells so it doesn't
+		// infinite loop. 
+		if (numberOfSpells <= 0)
+			return 0;
+				
+		// check to see if deck size is less than number of lands and spells
+		// This should be right? landMapInt should be number of lands. 
+		if (sizeOfDeck < landMapInt + numberOfSpells) {
+			return 0;
+		}
+				
+		for (int i = landMapInt; i < landMapInt + numberOfSpells; i++) {
+			spellsMap.add(i);
+		}
+		
 		float numberOfSuccess = 0;
 		// just calling rand once here might be more accurate. 
 		Random rand = new Random() ;
 		for (int i = 0; i < 1000; i++) {
-			if (runSimulation(rand))
+			if (runSimulation(rand, sizeOfDeck,landMap, playOrDraw, 
+				turnWantToCast, spellsMap))
 				numberOfSuccess++;
 		}
 		
 		return numberOfSuccess / (float) 1000;
 	}
 	
-	private boolean runSimulation(Random rand) {
-		// First thing, how to run the simulation. 
-		// So let's ignore mulligans for now, just 
-		// look at number of cards and how many lands you get.
-		int playOrDraw;
-		if (playOrDrawButton.getText().equalsIgnoreCase("Play"))
-			playOrDraw = 0;
-		else
-			playOrDraw = 1;
-		// -1 here because if it's turn 1, you don't get 1 more card.  
-		int turnWantToCast = Integer.valueOf(turnBox.getValue()) - 1;
-		int sizeOfDeck = Integer.valueOf(deckSizeBox.getValue());
-		
-		// Make a hashmap linking the number of the land (for the random number 
-		// generator) and the mana it can produce. 
-		HashMap<Integer, String> landMap = new HashMap<Integer, String>();
-		int landMapInt = 0;
-		
-		// row count starts since the first row is the labels. 
-		for (int i = 1; i < landsFlexTable.getRowCount(); i++) {
-			for (int j = 0; j < Integer.valueOf(((TextBox) landsFlexTable.getWidget(i, 0)).getValue()); j++) {
-				landMap.put(landMapInt,  ((TextBox) landsFlexTable.getWidget(i, 1)).getValue().toLowerCase());
-				landMapInt++;
-			}
-		}
-		
-		HashSet<Integer> spellsMap = new HashSet<Integer>();
-		// Alright, finally dealing with whether or not you draw the card..
-		int numberOfSpells = Integer.valueOf(numberOfCardsBox.getValue());
-		
-		// Check to see if they put in a rela number of spells so it doesn't
-		// infinite loop. 
-		if (numberOfSpells == 0)
-			return false;
-		
-		// check to see if deck size is less than number of lands and spells
-		// This should be right? landMapInt should be number of lands. 
-		if (sizeOfDeck < landMapInt + numberOfSpells) {
-			return false;
-		}
-		
-		for (int i = landMapInt; i < landMapInt + numberOfSpells; i++) {
-			spellsMap.add(i);
-		}
+	private boolean runSimulation(Random rand, int sizeOfDeck, HashMap<Integer, Land> landMap,
+			int playOrDraw, int turnWantToCast, HashSet<Integer> spellsMap ) {
 		
 		HashSet<Integer> pickedSet;
 		boolean contains = false;
 		// Have to check if you drew the specified card. 
+		int lastPickedCard = -1;
 		do {
 			int randomCard;
 			// Is 8 here because you do a -- at the beginning
@@ -293,13 +305,19 @@ public class LandCounter implements EntryPoint {
 					}
 				}
 			} while (checkForMulligan(initialNumberOfLands, initialNumberOfCardsInHand));
+			// TODO: Put the old thing back in, this is just to test comes into play tapped.
+				// (checkForMulligan(initialNumberOfLands, initialNumberOfCardsInHand));
 			
 			// Then, get the rest of the cards. 
-			for (int i = 0; i < playOrDraw + turnWantToCast; i++) {
+			// minus 1 here since if turn 1, you don't actually have a card. 
+			for (int i = 0; i < playOrDraw + turnWantToCast - 1; i++) {
 				do {
 					randomCard = rand.nextInt(sizeOfDeck);
 				} while (pickedSet.contains(randomCard));
 				pickedSet.add(randomCard);
+				// get the last land. 
+				if (i == playOrDraw + turnWantToCast - 2)
+					lastPickedCard = randomCard;
 			}
 			
 			// This checks if you draw the card. If not, then, um... redo it. 
@@ -312,60 +330,107 @@ public class LandCounter implements EntryPoint {
 		} while (!contains);
 		
 		// Mark the cards that have been picked to the land. 
-		List<String> pickedLands = new ArrayList<String>();
+
+		List<Land> pickedLands = new ArrayList<Land>();
 		for (int card : pickedSet) {
 			if (landMap.containsKey(card)) {
+				// So shouldn't add the last land if it comes into play tapped.
+				if (card == lastPickedCard && landMap.get(card).isComesIntoPlayTapped())
+					continue;
 				pickedLands.add(landMap.get(card));
 			}
 		}
+		
+		// console("lastpickedcard is " + lastPickedCard + " and pickedSet is " + pickedSet + " and pickedLands is " + pickedLands);
 		
 		// Okay, now let's see if picked set can cast the spell. 
 		String cmcOfSpell = sortString(castingCostBox.getValue().toLowerCase());
 		// Sort the string.
 		String sortedCmcOfSpell = sortString(cmcOfSpell);
-				
+		
+		
 		// Make it so if there is less lands than total cmc, return false. 
 		if (pickedLands.size() < cmcOfSpell.length()) {
 			return false;
 		}
 		
-		// new Land Strings is the "temp" permutation of all the mana it can cast. 
-		HashSet<String> oldLandsStrings = new HashSet<String>();
-		HashSet<String> newLandsStrings = new HashSet<String>();
-		oldLandsStrings.add("");
 		
-		for (String mana : pickedLands) {
-		    int manaLength = mana.length();
+		// Also, if number of picked lands is exact same as cmc which is same as turn
+		// then also no go if all the lands are tapped. This seems fringe, but still
+		// faster than simulation I bet.
+		if (pickedLands.size() == cmcOfSpell.length() 
+				&& cmcOfSpell.length() >= turnWantToCast)
+		{
+			boolean allTapped = true;
+			for (Land land : pickedLands) {
+				if (!land.isComesIntoPlayTapped())
+					allTapped = false;
+			}
+			if (allTapped)
+				return false;
+		}
+		
+		
+		// new Land Strings is the "temp" permutation of all the mana it can cast. 
+		
+		HashSet<ManaString> oldManaStrings = new HashSet<ManaString>();
+		ManaString blankString = new ManaString();
+		oldManaStrings.add(blankString);
+		HashSet<ManaString> newManaStrings = new HashSet<ManaString>();
+		
+		for (Land land : pickedLands) {
+		    int manaLength = land.getMana().length();
 		    // so there are going to be old length * manaLength new permutations of
 		    // can cast. Mana length is the mumber of kids of mana this land can have.
 
 		    // So for each mana kind, run through all the old strings, and add 
 		    // that mana kind. 
 		    for (int i = 0; i < manaLength; i++){
-		        char c = mana.charAt(i); 
+		        char c = land.getMana().charAt(i); 
+		        
+		        for (ManaString manaString : oldManaStrings) {
+		        	
+		        	ManaString newManaString = new ManaString(manaString, land, c);
+		        	newManaStrings.add(newManaString);
+		        }
 		        // For loop looks like this to run through each c j times, and the 
 		        // j % manaLength makes sure each set of old permutations get c
 		        // added to it once. 
-		        for (String oldString : oldLandsStrings) {
-		        	String sortedString = sortString(oldString + c);
-		        	newLandsStrings.add(sortedString);
-		        }
+//		        for (String oldString : oldLandsStrings) {
+//		        	String sortedString = sortString(oldString + c);
+//		        	newLandsStrings.add(sortedString);
+//		        }
 		    }
 		    
 		    
-		    oldLandsStrings = newLandsStrings;
-		    newLandsStrings = new HashSet<String>();
+		    oldManaStrings  = newManaStrings;
+		    newManaStrings = new HashSet<ManaString>();
 		}
+		
 		
 		// Array of the non colorless casting cost of spell. 
 		ArrayList<String> regexString = splitStringSinceRegexIsTooHard(sortedCmcOfSpell);
 		// See if any of the old lands Strings contains the regexString
-		for (String string : oldLandsStrings) {
+		for (ManaString manaString : oldManaStrings) {
+			console("manaString is: " + manaString.getMana() + " and untapped is:" + 
+		manaString.getUntappedMana() + " and tapped is:" + manaString.getTappedMana());
 			boolean stringContains = true;
 			for (String castingCostString : regexString) 
-				if (!string.contains(castingCostString))
+				if (!manaString.getMana().contains(castingCostString)) {
 					stringContains = false;
+				}
 			if (stringContains) {
+				// So doesn't automatically return true now. Have to check if
+				// at least one of the soruces come from untapped 
+				// if cmc == turn want to cast.
+				if (cmcOfSpell.length() >= turnWantToCast && !cmcOfSpell.contains("c")) {
+					for (String castingCostString : regexString) 
+						if (manaString.getUntappedMana().contains(String.valueOf(castingCostString.charAt(0)))) {
+							return true;
+						}
+					// got here, means does not contain?
+					return false;
+				}
 				return true;
 			}
 		}
@@ -380,7 +445,7 @@ public class LandCounter implements EntryPoint {
 		return false;
 	}
 	
-	private String sortString(String text) {
+	public static String sortString(String text) {
 		char[] chars = text.toCharArray();
 	     Arrays.sort(chars);
 	     String sorted = new String(chars);
@@ -388,6 +453,7 @@ public class LandCounter implements EntryPoint {
 	}
 	
 	public static ArrayList<String> splitStringSinceRegexIsTooHard(String string) {
+
 		int j = 0;
 		ArrayList<String> newManaStringList = new ArrayList<String>();
 		String newManaString = "";
