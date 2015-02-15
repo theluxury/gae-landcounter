@@ -68,6 +68,7 @@ public class LandCounter implements EntryPoint {
 	
 	
 	public void onModuleLoad() {
+		console("loading landcounter");
 		
 		landsFlexTable.setWidget(0,0,numberOfLandsLabel);
 		landsFlexTable.setWidget(0,1,manaOfLandLabel);
@@ -181,6 +182,12 @@ public class LandCounter implements EntryPoint {
 		});
 		
 		RootPanel.get("landCounter").add(mainPanel);
+		RootPanel.get("verification").add(mainPanel);
+		
+		
+		
+		// Everything below is for the test class. Bleh, there has to be a better way...
+		
 	}
 	
 	private void addLand() {
